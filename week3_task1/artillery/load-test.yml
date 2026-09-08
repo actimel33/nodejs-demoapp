@@ -1,0 +1,61 @@
+# Нагрузочный сценарий для демонстрации автомасштабирования (Artillery 2.x).
+#
+# Запуск:
+#   npx artillery@latest run artillery/load-test.yml --target http://<DNS-имя-ALB>
+#
+# Отчёт в файл + HTML:
+#   npx artillery@latest run artillery/load-test.yml \
+#       --target http://<ALB> --output report.json
+#   npx artillery@latest report report.json
+#
+# ВАЖНО про /tools/load. Это единственный эндпоинт приложения, который реально
+# греет процессор: внутри синхронный цикл на ~500 млн итераций Math.pow, который
+# занимает целое ядро на несколько секунд и блокирует event loop Node.js
+# ЦЕЛИКОМ. Пока он крутится, инстанс не отвечает даже на health check
+# балансировщика. Поэтому:
+#   - arrivalRate держим единицами, а не сотнями;
+#   - health check у target group должен быть терпимым (interval 30, threshold 5),
+#     иначе группа начнёт убивать инстансы прямо во время теста;
+#   - выпадение цели из target group под нагрузкой — не поломка инфраструктуры,
+#     а свойство приложения. Это стоит написать в отчёте, а не прятать.
+
+config:
+  # target задаётся флагом --target, чтобы не хранить DNS-имя в git
+  phases:
+    - name: Warm up
+      duration: 60
+      arrivalRate: 1
+
+    - name: Ramp up
+      duration: 180
+      arrivalRate: 1
+      rampTo: 10
+
+    # Главная фаза: ровное плато, а не пик. Target tracking просыпается
+    # только после ~3 минут УСТОЙЧИВОГО превышения цели — пилообразный
+    # график с редкими всплесками до 47% политику не разбудит.
+    - name: Sustained load
+      duration: 600
+      arrivalRate: 10
+
+    - name: Cool down
+      duration: 60
+      arrivalRate: 1
+
+  http:
+    # ответ /tools/load приходит через несколько секунд — дефолтных 10 с мало
+    timeout: 60
+
+scenarios:
+  - name: Browse and burn CPU
+    weight: 1
+    flow:
+      - get:
+          url: "/"
+      - get:
+          # страница показывает hostname контейнера — доказательство балансировки
+          url: "/info"
+      - get:
+          url: "/tools/load"
+          expect:
+            - statusCode: 200
