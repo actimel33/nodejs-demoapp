@@ -21,9 +21,9 @@ cpu_target_value     = 40
 enable_notifications = false
 alert_email          = ""
 
-# Task 3.
-enable_docdb         = false
+# Task 3. ВНИМАНИЕ: true поднимает кластер DocumentDB за $0.089/час.
+enable_docdb         = true
 docdb_instance_class = "db.t4g.medium"
 docdb_instance_count = 1
 
-enable_inspector = false
+enable_inspector = true

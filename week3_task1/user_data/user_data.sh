@@ -54,8 +54,18 @@ if [ -n "${docdb_endpoint}" ]; then
     --secret-id "${docdb_secret_id}" \
     --query SecretString --output text)
 
-  DOCDB_USER=$(echo "$${SECRET_JSON}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["username"])')
-  DOCDB_PASS=$(echo "$${SECRET_JSON}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["password"])')
+  # Логин и пароль ПРОЦЕНТНО-КОДИРУЕМ перед подстановкой в URI.
+  #
+  # AWS генерирует пароль из случайных символов, и среди них попадаются такие,
+  # которые в URI имеют своё значение: # начинает якорь, @ отделяет
+  # учётные данные от хоста, / и ? — путь и параметры. Без кодирования драйвер
+  # MongoDB падает с "MongoParseError: Password contains unescaped characters",
+  # причём приложение при этом стартует и отдаёт страницы — не работает только
+  # раздел /todo, а /api/todo возвращает 500.
+  #
+  # safe="" в quote() обязателен: без него / остаётся незакодированным.
+  DOCDB_USER=$(echo "$${SECRET_JSON}" | python3 -c 'import sys,json,urllib.parse;print(urllib.parse.quote(json.load(sys.stdin)["username"], safe=""))')
+  DOCDB_PASS=$(echo "$${SECRET_JSON}" | python3 -c 'import sys,json,urllib.parse;print(urllib.parse.quote(json.load(sys.stdin)["password"], safe=""))')
 
   # retryWrites=false обязателен: DocumentDB не поддерживает retryable writes,
   # а драйвер MongoDB включает их по умолчанию.
