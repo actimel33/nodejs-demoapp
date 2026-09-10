@@ -1,0 +1,27 @@
+# Конфигурация Infracost. Кладётся в КОРЕНЬ форка, рядом с terragrunt/.
+#
+# Terragrunt Infracost определяет сам: достаточно, чтобы в каталоге или на
+# глубине до 5 уровней нашёлся terragrunt.hcl. Запускать `terragrunt plan`
+# вручную не нужно — Infracost скачивает исходники модулей в кеш .infracost
+# и парсит HCL напрямую.
+#
+# exclude_paths обязателен: без него Infracost найдёт в .terragrunt-cache
+# скачанные копии модулей и посчитает всё по нескольку раз.
+
+version: "0.3"
+
+projects:
+  - path: terragrunt/dev
+    name: dev
+    exclude_paths:
+      - ".terragrunt-cache"
+
+  - path: terragrunt/production
+    name: production
+    exclude_paths:
+      - ".terragrunt-cache"
+
+  - path: terragrunt/loadtest
+    name: loadtest
+    exclude_paths:
+      - ".terragrunt-cache"

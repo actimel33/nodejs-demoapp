@@ -1,0 +1,15 @@
+# Кеш Terragrunt: сюда скачиваются модули и генерируются backend.tf с provider.tf
+.terragrunt-cache/
+
+# Кеш Infracost: копии модулей и результаты сканирования
+.infracost/
+
+# Состояние и планы — состояние живёт в S3, здесь его быть не должно
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# Локальные переопределения
+*.auto.tfvars
+*_override.tf
